@@ -63,6 +63,8 @@ export async function getAppData(): Promise<AppData> {
         plan: client.plan ?? "",
         monthlyValue: toNumber(client.monthlyValue),
         dueDay: client.dueDay ?? 1,
+        dueDays: client.dueDays ?? String(client.dueDay ?? 1),
+        billingFrequency: client.billingFrequency ?? "MENSAL",
         notes: client.notes ?? "",
         status: client.status,
         services: client.services.map((service) => ({

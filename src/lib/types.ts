@@ -15,6 +15,8 @@ export type TaskPriority = "BAIXA" | "MEDIA" | "ALTA" | "URGENTE";
 
 export type FinanceType = "RECEITA" | "DESPESA";
 
+export type BillingFrequency = "MENSAL" | "QUINZENAL" | "SEMANAL" | "PERSONALIZADO";
+
 export type LeadStatus =
   | "LEAD_NOVO"
   | "CONTATO_FEITO"
@@ -34,6 +36,8 @@ export type Client = {
   plan: string;
   monthlyValue: number;
   dueDay: number;
+  dueDays: string;
+  billingFrequency: BillingFrequency;
   notes: string;
   status: ClientStatus;
   services: ContractedService[];
