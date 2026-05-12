@@ -206,3 +206,7 @@ export default async function FinancePage() {
             ))}
           </CardContent>
         </Card>
+      </section>
+    </>
+  );
+}
