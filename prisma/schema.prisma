@@ -34,6 +34,13 @@ enum FinanceType {
   DESPESA
 }
 
+enum BillingFrequency {
+  MENSAL
+  QUINZENAL
+  SEMANAL
+  PERSONALIZADO
+}
+
 enum LeadStatus {
   LEAD_NOVO
   CONTATO_FEITO
@@ -122,6 +129,8 @@ model Client {
   plan         String?
   monthlyValue Decimal             @default(0) @db.Decimal(12, 2)
   dueDay       Int?
+  dueDays      String              @default("1")
+  billingFrequency BillingFrequency @default(MENSAL)
   notes        String?
   status       ClientStatus        @default(PROSPECT)
   createdAt    DateTime            @default(now())
