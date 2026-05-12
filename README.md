@@ -1,4 +1,4 @@
-# Painel da Agencia - MVP
+# Painel da Agencia - MVP - Pablo
 
 Sistema interno simples para uma agencia/servicos freelance. A Fase 1 ja vem com dashboard, clientes, tarefas, financeiro basico e login preparado com Better Auth.
 
