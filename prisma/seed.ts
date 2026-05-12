@@ -1,0 +1,189 @@
+import "dotenv/config";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "../src/generated/prisma";
+import { sampleData } from "../src/lib/sample-data";
+
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL nao configurada.");
+}
+
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({
+    connectionString: process.env.DATABASE_URL
+  })
+});
+
+async function main() {
+  for (const client of sampleData.clients) {
+    await prisma.client.upsert({
+      where: { id: client.id },
+      update: {
+        name: client.name,
+        company: client.company,
+        phone: client.phone,
+        instagram: client.instagram,
+        email: client.email,
+        niche: client.niche,
+        plan: client.plan,
+        monthlyValue: client.monthlyValue,
+        dueDay: client.dueDay,
+        notes: client.notes,
+        status: client.status
+      },
+      create: {
+        id: client.id,
+        name: client.name,
+        company: client.company,
+        phone: client.phone,
+        instagram: client.instagram,
+        email: client.email,
+        niche: client.niche,
+        plan: client.plan,
+        monthlyValue: client.monthlyValue,
+        dueDay: client.dueDay,
+        notes: client.notes,
+        status: client.status
+      }
+    });
+
+    for (const service of client.services) {
+      await prisma.contractedService.upsert({
+        where: { id: service.id },
+        update: {
+          name: service.name,
+          quantity: service.quantity,
+          unit: service.unit,
+          monthlyIncluded: service.monthlyIncluded,
+          notes: service.notes
+        },
+        create: {
+          id: service.id,
+          clientId: client.id,
+          name: service.name,
+          quantity: service.quantity,
+          unit: service.unit,
+          monthlyIncluded: service.monthlyIncluded,
+          notes: service.notes
+        }
+      });
+    }
+  }
+
+  for (const task of sampleData.tasks) {
+    await prisma.task.upsert({
+      where: { id: task.id },
+      update: {
+        title: task.title,
+        description: task.description,
+        clientId: task.clientId,
+        priority: task.priority,
+        dueDate: task.dueDate ? new Date(task.dueDate) : null,
+        status: task.status,
+        attachments: task.attachments
+      },
+      create: {
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        clientId: task.clientId,
+        priority: task.priority,
+        dueDate: task.dueDate ? new Date(task.dueDate) : null,
+        status: task.status,
+        attachments: task.attachments
+      }
+    });
+  }
+
+  for (const entry of sampleData.finances) {
+    await prisma.financialEntry.upsert({
+      where: { id: entry.id },
+      update: {
+        type: entry.type,
+        description: entry.description,
+        category: entry.category,
+        amount: entry.amount,
+        date: new Date(entry.date),
+        dueDate: entry.dueDate ? new Date(entry.dueDate) : null,
+        paymentMethod: entry.paymentMethod,
+        paid: entry.paid,
+        recurring: entry.recurring,
+        installment: entry.installment,
+        installments: entry.installments,
+        currentPart: entry.currentPart,
+        clientId: entry.clientId
+      },
+      create: {
+        id: entry.id,
+        type: entry.type,
+        description: entry.description,
+        category: entry.category,
+        amount: entry.amount,
+        date: new Date(entry.date),
+        dueDate: entry.dueDate ? new Date(entry.dueDate) : null,
+        paymentMethod: entry.paymentMethod,
+        paid: entry.paid,
+        recurring: entry.recurring,
+        installment: entry.installment,
+        installments: entry.installments,
+        currentPart: entry.currentPart,
+        clientId: entry.clientId
+      }
+    });
+  }
+
+  for (const item of sampleData.content) {
+    await prisma.contentItem.upsert({
+      where: { id: item.id },
+      update: {
+        clientId: item.clientId,
+        publishDate: new Date(item.publishDate),
+        theme: item.theme,
+        status: item.status,
+        approved: item.approved,
+        published: item.published
+      },
+      create: {
+        id: item.id,
+        clientId: item.clientId,
+        publishDate: new Date(item.publishDate),
+        theme: item.theme,
+        status: item.status,
+        approved: item.approved,
+        published: item.published
+      }
+    });
+  }
+
+  for (const lead of sampleData.leads) {
+    await prisma.lead.upsert({
+      where: { id: lead.id },
+      update: {
+        name: lead.name,
+        company: lead.company,
+        phone: lead.phone,
+        desiredService: lead.desiredService,
+        estimatedBudget: lead.estimatedBudget,
+        status: lead.status
+      },
+      create: {
+        id: lead.id,
+        name: lead.name,
+        company: lead.company,
+        phone: lead.phone,
+        desiredService: lead.desiredService,
+        estimatedBudget: lead.estimatedBudget,
+        status: lead.status
+      }
+    });
+  }
+}
+
+main()
+  .then(async () => {
+    await prisma.$disconnect();
+  })
+  .catch(async (error) => {
+    console.error(error);
+    await prisma.$disconnect();
+    process.exit(1);
+  });
