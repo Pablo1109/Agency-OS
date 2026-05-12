@@ -17,10 +17,7 @@ export default async function ClientsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Clientes"
-        description="Cadastre clientes, acompanhe plano contratado, valor mensal, vencimento e entregas combinadas."
-      />
+      <PageHeader title="Clientes" description="Cadastre clientes, acompanhe plano contratado, valor mensal, vencimento e entregas combinadas." />
 
       <section className="grid gap-4 xl:grid-cols-[0.85fr_1.4fr]">
         <Card>
@@ -68,8 +65,23 @@ export default async function ClientsPage() {
                   <Input id="monthlyValue" name="monthlyValue" type="number" step="0.01" placeholder="1200" />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="dueDay">Vencimento</Label>
+                  <Label htmlFor="dueDay">1o vencimento</Label>
                   <Input id="dueDay" name="dueDay" type="number" min="1" max="31" placeholder="10" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="billingFrequency">Frequencia</Label>
+                  <Select id="billingFrequency" name="billingFrequency" defaultValue="MENSAL">
+                    <option value="MENSAL">Mensal</option>
+                    <option value="QUINZENAL">Quinzenal</option>
+                    <option value="SEMANAL">Semanal</option>
+                    <option value="PERSONALIZADO">Personalizado</option>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="dueDays">Dias de vencimento</Label>
+                  <Input id="dueDays" name="dueDays" placeholder="Ex: 5, 20 ou 7, 14, 21, 28" />
                 </div>
               </div>
               <div className="grid gap-2">
@@ -86,15 +98,18 @@ export default async function ClientsPage() {
                 <Label htmlFor="notes">Observacoes</Label>
                 <Textarea id="notes" name="notes" placeholder="Combinados, preferencias e alertas" />
               </div>
-              <Button type="submit" className="w-full">
-                <Plus className="h-4 w-4" />
-                Cadastrar cliente
-              </Button>
+              <Button type="submit" className="w-full"><Plus className="h-4 w-4" />Cadastrar cliente</Button>
             </form>
           </CardContent>
         </Card>
 
         <div className="space-y-4">
+          {data.clients.length === 0 ? (
+            <Card>
+              <CardContent className="p-6 text-sm text-muted-foreground">Nenhum cliente cadastrado ainda. Cadastre o primeiro cliente no formulario ao lado.</CardContent>
+            </Card>
+          ) : null}
+
           {data.clients.map((client) => (
             <Card key={client.id}>
               <CardContent className="p-5">
@@ -105,32 +120,17 @@ export default async function ClientsPage() {
                       <Badge className={clientStatusTone[client.status]}>{clientStatusLabels[client.status]}</Badge>
                     </div>
                     <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-                      <span className="flex items-center gap-2">
-                        <UserRound className="h-4 w-4" />
-                        {client.name}
-                      </span>
-                      <span className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4" />
-                        {client.niche || "Sem nicho"}
-                      </span>
-                      <span className="flex items-center gap-2">
-                        <Phone className="h-4 w-4" />
-                        {client.phone || "Sem telefone"}
-                      </span>
-                      <span className="flex items-center gap-2">
-                        <Mail className="h-4 w-4" />
-                        {client.email || client.instagram || "Sem contato"}
-                      </span>
+                      <span className="flex items-center gap-2"><UserRound className="h-4 w-4" />{client.name}</span>
+                      <span className="flex items-center gap-2"><Building2 className="h-4 w-4" />{client.niche || "Sem nicho"}</span>
+                      <span className="flex items-center gap-2"><Phone className="h-4 w-4" />{client.phone || "Sem telefone"}</span>
+                      <span className="flex items-center gap-2"><Mail className="h-4 w-4" />{client.email || client.instagram || "Sem contato"}</span>
                     </div>
                   </div>
 
                   <div className="rounded-lg border bg-muted/40 p-4 lg:w-64">
-                    <p className="flex items-center gap-2 text-sm font-medium">
-                      <CircleDollarSign className="h-4 w-4 text-primary" />
-                      {formatCurrency(client.monthlyValue)}
-                    </p>
+                    <p className="flex items-center gap-2 text-sm font-medium"><CircleDollarSign className="h-4 w-4 text-primary" />{formatCurrency(client.monthlyValue)}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Plano {client.plan || "sem nome"} | vence dia {client.dueDay}
+                      Plano {client.plan || "sem nome"} | {client.billingFrequency.toLowerCase()} | vence dia(s) {client.dueDays || client.dueDay}
                     </p>
                   </div>
                 </div>
@@ -139,9 +139,7 @@ export default async function ClientsPage() {
                   {client.services.map((service) => (
                     <div key={service.id} className="rounded-md border p-3">
                       <p className="text-sm font-medium">{service.name}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {service.quantity ? `${service.quantity} ${service.unit ?? "entregas"}` : "Escopo aberto"}
-                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">{service.quantity ? `${service.quantity} ${service.unit ?? "entregas"}` : "Escopo aberto"}</p>
                       {service.notes ? <p className="mt-2 text-xs text-muted-foreground">{service.notes}</p> : null}
                     </div>
                   ))}
