@@ -41,8 +41,10 @@ export function AppShell({
   const pathname = usePathname();
 
   async function signOut() {
-    await authClient.signOut();
-    window.location.href = "/";
+    if (!user.demo) {
+      await authClient.signOut();
+    }
+    window.location.href = "/login";
   }
 
   return (
@@ -92,7 +94,7 @@ export function AppShell({
               </Button>
               <Button variant="ghost" size="sm" className="justify-start" onClick={signOut}>
                 <LogOut className="h-4 w-4" />
-                Sair
+                {user.demo ? "Entrar" : "Sair"}
               </Button>
             </div>
           </div>
