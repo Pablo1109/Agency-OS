@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { createFinanceAction } from "@/lib/actions";
+import { createFinanceAction, markFinancePaidAction, registerClientPaymentAction } from "@/lib/actions";
 import { getAppData } from "@/lib/data";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { getDashboardMetrics, getFinanceChart } from "@/lib/metrics";
@@ -22,40 +22,13 @@ export default async function FinancePage() {
 
   return (
     <>
-      <PageHeader
-        title="Financeiro"
-        description="Receitas, despesas, assinaturas, parcelamentos e uma leitura simples do lucro real."
-      />
+      <PageHeader title="Financeiro" description="Receitas, despesas, assinaturas, parcelamentos e uma leitura simples do lucro real." />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          title="Receitas pagas"
-          value={formatCurrency(metrics.revenue)}
-          detail="Total recebido no mes"
-          icon={CircleDollarSign}
-          tone="teal"
-        />
-        <MetricCard
-          title="Despesas pagas"
-          value={formatCurrency(metrics.expenses)}
-          detail="Custos e assinaturas"
-          icon={ReceiptText}
-          tone="gold"
-        />
-        <MetricCard
-          title="Lucro real"
-          value={formatCurrency(metrics.profit)}
-          detail="Receitas menos despesas"
-          icon={WalletCards}
-          tone="coral"
-        />
-        <MetricCard
-          title="Recorrencias"
-          value={String(recurring.length)}
-          detail={`${installments.length} parcelamento(s) ativo(s)`}
-          icon={Repeat2}
-          tone="slate"
-        />
+        <MetricCard title="Receitas pagas" value={formatCurrency(metrics.revenue)} detail="Total recebido no mes" icon={CircleDollarSign} tone="teal" />
+        <MetricCard title="Despesas pagas" value={formatCurrency(metrics.expenses)} detail="Custos e assinaturas" icon={ReceiptText} tone="gold" />
+        <MetricCard title="Lucro real" value={formatCurrency(metrics.profit)} detail="Receitas menos despesas" icon={WalletCards} tone="coral" />
+        <MetricCard title="Recorrencias" value={String(recurring.length)} detail={`${installments.length} parcelamento(s) ativo(s)`} icon={Repeat2} tone="slate" />
       </section>
 
       <section className="mt-6 grid gap-4 xl:grid-cols-[1fr_0.85fr]">
@@ -118,31 +91,69 @@ export default async function FinancePage() {
                 <Select id="clientId" name="clientId" defaultValue="">
                   <option value="">Sem cliente</option>
                   {data.clients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.company || client.name}
-                    </option>
+                    <option key={client.id} value={client.id}>{client.company || client.name}</option>
                   ))}
                 </Select>
               </div>
               <div className="grid gap-3 rounded-lg border bg-muted/40 p-3 text-sm">
-                <label className="flex items-center gap-2">
-                  <input name="paid" type="checkbox" className="h-4 w-4 rounded border" />
-                  Pago/recebido
-                </label>
-                <label className="flex items-center gap-2">
-                  <input name="recurring" type="checkbox" className="h-4 w-4 rounded border" />
-                  Recorrente mensal
-                </label>
-                <label className="flex items-center gap-2">
-                  <input name="installment" type="checkbox" className="h-4 w-4 rounded border" />
-                  Parcelado
-                </label>
+                <label className="flex items-center gap-2"><input name="paid" type="checkbox" className="h-4 w-4 rounded border" />Pago/recebido</label>
+                <label className="flex items-center gap-2"><input name="recurring" type="checkbox" className="h-4 w-4 rounded border" />Recorrente mensal</label>
+                <label className="flex items-center gap-2"><input name="installment" type="checkbox" className="h-4 w-4 rounded border" />Parcelado</label>
               </div>
-              <Button type="submit">
-                <Plus className="h-4 w-4" />
-                Salvar lancamento
-              </Button>
+              <Button type="submit"><Plus className="h-4 w-4" />Salvar lancamento</Button>
             </form>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="mt-6 grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Receber de cliente</CardTitle>
+            <CardDescription>Gera receita paga automaticamente para cliente fixo ou projeto.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action={registerClientPaymentAction} className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="paymentClientId">Cliente</Label>
+                <Select id="paymentClientId" name="clientId" required defaultValue="">
+                  <option value="">Selecione</option>
+                  {data.clients.map((client) => (
+                    <option key={client.id} value={client.id}>{client.company || client.name} - {formatCurrency(client.monthlyValue)}</option>
+                  ))}
+                </Select>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="paymentAmount">Valor recebido</Label>
+                  <Input id="paymentAmount" name="amount" type="number" step="0.01" placeholder="Usa valor do cliente" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="paymentMethodQuick">Metodo</Label>
+                  <Input id="paymentMethodQuick" name="paymentMethod" placeholder="Pix" />
+                </div>
+              </div>
+              <Button type="submit"><CheckCircle2 className="h-4 w-4" />Registrar pagamento</Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Vencimentos dos clientes</CardTitle>
+            <CardDescription>Referencia para mensal, quinzenal, semanal ou datas personalizadas.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {data.clients.length === 0 ? <p className="text-sm text-muted-foreground">Cadastre clientes para acompanhar vencimentos.</p> : null}
+            {data.clients.map((client) => (
+              <div key={client.id} className="flex items-center justify-between gap-4 rounded-md border p-3">
+                <div>
+                  <p className="text-sm font-medium">{client.company || client.name}</p>
+                  <p className="text-xs text-muted-foreground">{client.billingFrequency.toLowerCase()} | dia(s) {client.dueDays || client.dueDay}</p>
+                </div>
+                <p className="text-sm font-semibold">{formatCurrency(client.monthlyValue)}</p>
+              </div>
+            ))}
           </CardContent>
         </Card>
       </section>
@@ -154,24 +165,24 @@ export default async function FinancePage() {
             <CardDescription>Clientes fixos, freelances e projetos unicos.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {data.finances
-              .filter((entry) => entry.type === "RECEITA")
-              .map((entry) => (
-                <div key={entry.id} className="flex items-center justify-between gap-4 rounded-md border p-3">
-                  <div>
-                    <p className="text-sm font-medium">{entry.description}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {entry.category} | {formatDate(entry.date)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold">{formatCurrency(entry.amount)}</p>
-                    <Badge className={entry.paid ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}>
-                      {entry.paid ? "Recebido" : "Pendente"}
-                    </Badge>
-                  </div>
+            {data.finances.filter((entry) => entry.type === "RECEITA").map((entry) => (
+              <div key={entry.id} className="flex items-center justify-between gap-4 rounded-md border p-3">
+                <div>
+                  <p className="text-sm font-medium">{entry.description}</p>
+                  <p className="text-xs text-muted-foreground">{entry.category} | {formatDate(entry.date)}</p>
                 </div>
-              ))}
+                <div className="text-right">
+                  <p className="text-sm font-semibold">{formatCurrency(entry.amount)}</p>
+                  <Badge className={entry.paid ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}>{entry.paid ? "Recebido" : "Pendente"}</Badge>
+                  {!entry.paid ? (
+                    <form action={markFinancePaidAction} className="mt-2">
+                      <input type="hidden" name="entryId" value={entry.id} />
+                      <Button type="submit" variant="outline" size="sm">Receber</Button>
+                    </form>
+                  ) : null}
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
 
@@ -181,35 +192,17 @@ export default async function FinancePage() {
             <CardDescription>Assinaturas, equipamentos, freelancers e custos avulsos.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {data.finances
-              .filter((entry) => entry.type === "DESPESA")
-              .map((entry) => (
-                <div key={entry.id} className="flex items-center justify-between gap-4 rounded-md border p-3">
-                  <div>
-                    <p className="text-sm font-medium">{entry.description}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {entry.category} | {entry.dueDate ? formatDate(entry.dueDate) : formatDate(entry.date)}
-                    </p>
-                    <div className="mt-1 flex gap-2">
-                      {entry.recurring ? (
-                        <Badge className="border-sky-200 bg-sky-50 text-sky-700">Recorrente</Badge>
-                      ) : null}
-                      {entry.installment ? (
-                        <Badge className="border-amber-200 bg-amber-50 text-amber-700">
-                          Parcela {entry.currentPart}/{entry.installments}
-                        </Badge>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold">{formatCurrency(entry.amount)}</p>
-                    {entry.paid ? <CheckCircle2 className="ml-auto mt-1 h-4 w-4 text-emerald-600" /> : null}
-                  </div>
+            {data.finances.filter((entry) => entry.type === "DESPESA").map((entry) => (
+              <div key={entry.id} className="flex items-center justify-between gap-4 rounded-md border p-3">
+                <div>
+                  <p className="text-sm font-medium">{entry.description}</p>
+                  <p className="text-xs text-muted-foreground">{entry.category} | {entry.dueDate ? formatDate(entry.dueDate) : formatDate(entry.date)}</p>
                 </div>
-              ))}
+                <div className="text-right">
+                  <p className="text-sm font-semibold">{formatCurrency(entry.amount)}</p>
+                  {entry.paid ? <CheckCircle2 className="ml-auto mt-1 h-4 w-4 text-emerald-600" /> : null}
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
-      </section>
-    </>
-  );
-}
