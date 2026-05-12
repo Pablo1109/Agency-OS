@@ -22,9 +22,20 @@ const clientSchema = z.object({
   plan: z.string().optional(),
   monthlyValue: z.coerce.number().default(0),
   dueDay: z.coerce.number().min(1).max(31).default(1),
+  dueDays: z.string().default("1"),
+  billingFrequency: z.enum(["MENSAL", "QUINZENAL", "SEMANAL", "PERSONALIZADO"]).default("MENSAL"),
   status: z.enum(["ATIVO", "PROSPECT", "PAUSADO", "INADIMPLENTE", "ENCERRADO"]).default("PROSPECT"),
   notes: z.string().optional()
 });
+
+function normalizeDueDays(value: string) {
+  const days = value
+    .split(/[,\s]+/)
+    .map((day) => Number(day.trim()))
+    .filter((day) => Number.isInteger(day) && day >= 1 && day <= 31);
+
+  return Array.from(new Set(days)).sort((a, b) => a - b).join(",") || "1";
+}
 
 export async function createClientAction(formData: FormData) {
   if (!hasDatabase()) {
@@ -42,6 +53,7 @@ export async function createClientAction(formData: FormData) {
   await prisma.client.create({
     data: {
       ...parsed.data,
+      dueDays: normalizeDueDays(parsed.data.dueDays || String(parsed.data.dueDay)),
       email: parsed.data.email || null
     }
   });
@@ -101,6 +113,59 @@ const financeSchema = z.object({
   clientId: z.string().optional().or(z.literal(""))
 });
 
+const clientPaymentSchema = z.object({
+  clientId: z.string().min(1),
+  amount: z.coerce.number().optional(),
+  date: z.string().optional().or(z.literal("")),
+  dueDate: z.string().optional().or(z.literal("")),
+  paymentMethod: z.string().optional(),
+  description: z.string().optional()
+});
+
+export async function registerClientPaymentAction(formData: FormData) {
+  if (!hasDatabase()) {
+    return;
+  }
+
+  const parsed = clientPaymentSchema.safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return;
+  }
+
+  const prisma = await getPrisma();
+  const client = await prisma.client.findUnique({
+    where: { id: parsed.data.clientId }
+  });
+
+  if (!client) {
+    return;
+  }
+
+  const clientName = client.company || client.name;
+  const amount = parsed.data.amount && parsed.data.amount > 0 ? parsed.data.amount : Number(client.monthlyValue);
+
+  await prisma.financialEntry.create({
+    data: {
+      type: "RECEITA",
+      description: parsed.data.description || `Pagamento ${clientName}`,
+      category: client.plan ? `Cliente fixo - ${client.plan}` : "Cliente fixo",
+      amount,
+      date: parsed.data.date ? new Date(parsed.data.date) : new Date(),
+      dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : null,
+      paymentMethod: parsed.data.paymentMethod || "Pix",
+      paid: true,
+      recurring: client.billingFrequency !== "PERSONALIZADO",
+      installment: false,
+      clientId: client.id
+    }
+  });
+
+  revalidatePath("/financeiro");
+  revalidatePath("/dashboard");
+  revalidatePath("/clientes");
+}
+
 export async function createFinanceAction(formData: FormData) {
   if (!hasDatabase()) {
     return;
@@ -156,5 +221,30 @@ export async function updateTaskStatusAction(formData: FormData) {
   });
 
   revalidatePath("/tarefas");
+  revalidatePath("/dashboard");
+}
+
+export async function markFinancePaidAction(formData: FormData) {
+  if (!hasDatabase()) {
+    return;
+  }
+
+  const entryId = String(formData.get("entryId") ?? "");
+
+  if (!entryId) {
+    return;
+  }
+
+  const prisma = await getPrisma();
+
+  await prisma.financialEntry.update({
+    where: { id: entryId },
+    data: {
+      paid: true,
+      date: new Date()
+    }
+  });
+
+  revalidatePath("/financeiro");
   revalidatePath("/dashboard");
 }
