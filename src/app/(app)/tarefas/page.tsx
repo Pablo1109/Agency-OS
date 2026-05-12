@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarClock, Plus } from "lucide-react";
+import { ArrowRight, CalendarClock, CheckCircle2, Clock3, Plus, Siren } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,8 @@ const statusFlow: TaskStatus[] = ["A_FAZER", "EM_ANDAMENTO", "AGUARDANDO_CLIENTE
 export default async function TasksPage() {
   const data = await getAppData();
   const grouped = groupTasksByStatus(data.tasks);
+  const openTasks = data.tasks.filter((task) => task.status !== "FINALIZADO");
+  const urgentTasks = openTasks.filter((task) => task.priority === "ALTA" || task.priority === "URGENTE");
 
   return (
     <>
@@ -26,6 +28,36 @@ export default async function TasksPage() {
         title="Tarefas"
         description="Kanban simples para organizar jobs, aprovacoes e entregas por cliente."
       />
+
+      <section className="mb-6 grid gap-4 sm:grid-cols-3">
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4">
+            <Clock3 className="h-5 w-5 text-primary" />
+            <div>
+              <p className="text-sm text-muted-foreground">Em aberto</p>
+              <p className="text-xl font-semibold">{openTasks.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4">
+            <Siren className="h-5 w-5 text-rose-600" />
+            <div>
+              <p className="text-sm text-muted-foreground">Alta prioridade</p>
+              <p className="text-xl font-semibold">{urgentTasks.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            <div>
+              <p className="text-sm text-muted-foreground">Finalizadas</p>
+              <p className="text-xl font-semibold">{grouped.FINALIZADO.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
 
       <Card className="mb-6">
         <CardHeader>
@@ -84,6 +116,10 @@ export default async function TasksPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              {grouped[status].length === 0 ? (
+                <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">Nenhuma tarefa aqui.</p>
+              ) : null}
+
               {grouped[status].map((task) => {
                 const currentIndex = statusFlow.indexOf(task.status);
                 const nextStatus = statusFlow[currentIndex + 1];
@@ -114,6 +150,19 @@ export default async function TasksPage() {
                         </Button>
                       </form>
                     ) : null}
+                    <form action={updateTaskStatusAction} className="mt-2">
+                      <input type="hidden" name="taskId" value={task.id} />
+                      <Select name="status" defaultValue={task.status} className="h-9 text-xs">
+                        {statusFlow.map((option) => (
+                          <option key={option} value={option}>
+                            {taskStatusLabels[option]}
+                          </option>
+                        ))}
+                      </Select>
+                      <Button type="submit" variant="ghost" size="sm" className="mt-2 w-full">
+                        Atualizar status
+                      </Button>
+                    </form>
                   </div>
                 );
               })}
