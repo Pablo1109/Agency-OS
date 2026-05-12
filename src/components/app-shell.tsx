@@ -42,7 +42,7 @@ export function AppShell({
 
   async function signOut() {
     await authClient.signOut();
-    window.location.href = "/login";
+    window.location.href = "/";
   }
 
   return (
