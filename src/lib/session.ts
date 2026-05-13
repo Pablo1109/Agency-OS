@@ -5,18 +5,11 @@ export type CurrentUser = {
   name: string;
   email: string;
   image?: string | null;
-  demo: boolean;
-};
-
-const demoUser: CurrentUser = {
-  name: "Seu Painel",
-  email: "modo-demo@agencia.local",
-  demo: true
 };
 
 export async function getCurrentUser(): Promise<CurrentUser> {
   if (!process.env.DATABASE_URL || !process.env.BETTER_AUTH_SECRET) {
-    return demoUser;
+    redirect("/login");
   }
 
   try {
@@ -25,19 +18,16 @@ export async function getCurrentUser(): Promise<CurrentUser> {
       headers: await headers()
     });
 
-    if (!session && process.env.REQUIRE_AUTH === "true") {
-      redirect("/login");
+    if (session?.user) {
+      return {
+        name: session.user.name,
+        email: session.user.email,
+        image: session.user.image
+      };
     }
-
-    return session?.user
-      ? {
-          name: session.user.name,
-          email: session.user.email,
-          image: session.user.image,
-          demo: false
-        }
-      : demoUser;
   } catch {
-    return demoUser;
+    // Se auth/banco falhar, volta para login.
   }
+
+  redirect("/login");
 }
