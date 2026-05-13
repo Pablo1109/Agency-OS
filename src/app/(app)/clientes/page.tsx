@@ -1,4 +1,4 @@
-import { Building2, CircleDollarSign, KeyRound, Mail, Phone, Plus, Save, UserRound } from "lucide-react";
+import { Building2, CircleDollarSign, KeyRound, Mail, Phone, Plus, Save, Trash2, UserRound } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { createClientAction, createClientCredentialAction, updateClientAction } from "@/lib/actions";
+import { createClientAction, createClientCredentialAction, deleteClientAction, updateClientAction } from "@/lib/actions";
 import { clientStatusLabels, clientStatusTone } from "@/lib/constants";
 import { getAppData } from "@/lib/data";
 import { formatCurrency } from "@/lib/format";
@@ -243,6 +243,25 @@ export default async function ClientsPage() {
                     </Button>
                     <Textarea name="notes" placeholder="Observacoes do acesso" className="md:col-span-4" />
                   </form>
+                  </div>
+                </details>
+
+                <details className="mt-4 rounded-lg border border-rose-200 bg-rose-50/60 p-4">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-rose-700">
+                    <Trash2 className="h-4 w-4" />
+                    Excluir cliente
+                  </summary>
+                  <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-rose-700">
+                      Remove o cliente e os acessos cadastrados. Os lancamentos financeiros ficam no historico sem cliente vinculado.
+                    </p>
+                    <form action={deleteClientAction}>
+                      <input type="hidden" name="clientId" value={client.id} />
+                      <Button type="submit" variant="destructive" size="sm">
+                        <Trash2 className="h-4 w-4" />
+                        Excluir
+                      </Button>
+                    </form>
                   </div>
                 </details>
               </CardContent>
