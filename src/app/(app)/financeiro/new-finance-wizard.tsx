@@ -21,6 +21,7 @@ export function NewFinanceWizard({ clients }: { clients: FinanceClient[] }) {
   const [type, setType] = useState<"RECEITA" | "DESPESA">("RECEITA");
   const [revenueMode, setRevenueMode] = useState<"CLIENTE" | "FREELA">("CLIENTE");
   const [paymentKind, setPaymentKind] = useState<"AVISTA" | "PARCELADO">("AVISTA");
+  const [recurringExpense, setRecurringExpense] = useState(false);
   const [clientId, setClientId] = useState("");
 
   const selectedClient = useMemo(() => clients.find((client) => client.id === clientId), [clientId, clients]);
@@ -137,6 +138,31 @@ export function NewFinanceWizard({ clients }: { clients: FinanceClient[] }) {
             <Label htmlFor="expensePaymentMethod">Forma de pagamento</Label>
             <Input id="expensePaymentMethod" name="paymentMethod" placeholder="Cartao, Pix, boleto" />
           </div>
+          {paymentKind === "AVISTA" ? (
+            <div className="grid gap-3 rounded-md border bg-muted/30 p-3">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="recurring"
+                  className="h-4 w-4"
+                  checked={recurringExpense}
+                  onChange={(event) => setRecurringExpense(event.target.checked)}
+                />
+                Despesa recorrente fixa
+              </label>
+              {recurringExpense ? (
+                <div className="grid gap-2">
+                  <Label htmlFor="recurrenceFrequency">Frequencia</Label>
+                  <Select id="recurrenceFrequency" name="recurrenceFrequency" defaultValue="MENSAL">
+                    <option value="MENSAL">Mensal</option>
+                    <option value="QUINZENAL">Quinzenal</option>
+                    <option value="SEMANAL">Semanal</option>
+                    <option value="PERSONALIZADO">Personalizado</option>
+                  </Select>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           {paymentKind === "PARCELADO" ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
