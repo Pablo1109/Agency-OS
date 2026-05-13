@@ -118,6 +118,28 @@ export async function updateClientAction(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+export async function deleteClientAction(formData: FormData) {
+  if (!hasDatabase()) {
+    return;
+  }
+
+  const clientId = String(formData.get("clientId") ?? "");
+
+  if (!clientId) {
+    return;
+  }
+
+  const prisma = await getPrisma();
+
+  await prisma.client.delete({
+    where: { id: clientId }
+  });
+
+  revalidatePath("/clientes");
+  revalidatePath("/financeiro");
+  revalidatePath("/dashboard");
+}
+
 const credentialSchema = z.object({
   clientId: z.string().min(1),
   platform: z.string().min(2),
@@ -364,6 +386,28 @@ export async function markFinancePaidAction(formData: FormData) {
   });
 
   revalidatePath("/financeiro");
+  revalidatePath("/dashboard");
+}
+
+export async function deleteFinanceEntryAction(formData: FormData) {
+  if (!hasDatabase()) {
+    return;
+  }
+
+  const entryId = String(formData.get("entryId") ?? "");
+
+  if (!entryId) {
+    return;
+  }
+
+  const prisma = await getPrisma();
+
+  await prisma.financialEntry.delete({
+    where: { id: entryId }
+  });
+
+  revalidatePath("/financeiro");
+  revalidatePath("/financeiro/recorrencias");
   revalidatePath("/dashboard");
 }
 
