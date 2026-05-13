@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { createProLaboreAction, markFinancePaidAction, registerClientPaymentAction } from "@/lib/actions";
+import { markFinancePaidAction, registerClientPaymentAction } from "@/lib/actions";
 import { getAppData } from "@/lib/data";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { getDashboardMetrics, getFinanceChart } from "@/lib/metrics";
@@ -121,7 +121,7 @@ export default async function FinancePage({
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard title="Receitas pagas" value={formatCurrency(metrics.revenue)} detail="Total recebido no mes" icon={CircleDollarSign} tone="teal" />
-        <MetricCard title="Despesas pagas" value={formatCurrency(metrics.expenses)} detail="Custos e assinaturas" icon={ReceiptText} tone="gold" href={`/financeiro?month=${selectedMonth}#despesas`} />
+        <MetricCard title="Despesas pagas" value={formatCurrency(metrics.expenses)} detail="Custos e assinaturas" icon={ReceiptText} tone="gold" href={`/financeiro/despesas?month=${selectedMonth}`} />
         <MetricCard title="Lucro real" value={formatCurrency(metrics.profit)} detail="Receitas menos despesas" icon={WalletCards} tone="coral" />
         <MetricCard title="Carteira" value={formatCurrency(walletBalance)} detail="Caixa acumulado" icon={HandCoins} tone="teal" />
         <MetricCard title="Recorrencias" value={String(recurring.length)} detail={`${installments.length} parcela(s) ativa(s)`} icon={Repeat2} tone="slate" href="/financeiro/recorrencias" />
@@ -193,26 +193,20 @@ export default async function FinancePage({
 
         <Card>
           <CardHeader>
-            <CardTitle>Retirada pro-labore</CardTitle>
-            <CardDescription>Registre a saida da empresa para sua pessoa fisica.</CardDescription>
+            <CardTitle>Pro-labore</CardTitle>
+            <CardDescription>Retiradas para sua pessoa fisica ficam em uma tela separada.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <form action={createProLaboreAction} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-              <div className="grid gap-2">
-                <label className="text-sm font-medium" htmlFor="proLaboreAmount">Valor</label>
-                <Input id="proLaboreAmount" name="amount" type="number" step="0.01" placeholder="1500" required />
-              </div>
-              <div className="grid gap-2">
-                <label className="text-sm font-medium" htmlFor="proLaboreDate">Data</label>
-                <Input id="proLaboreDate" name="date" type="date" />
-              </div>
-              <Button type="submit">
+          <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-2xl font-semibold">{formatCurrency(proLaboreTotal)}</p>
+              <p className="mt-1 text-sm text-muted-foreground">Retirado em {selectedLabel}</p>
+            </div>
+            <Button asChild>
+              <a href={`/financeiro/pro-labore?month=${selectedMonth}`}>
                 <HandCoins className="h-4 w-4" />
-                Registrar
-              </Button>
-              <Input name="description" placeholder="Descricao opcional" className="sm:col-span-2" />
-              <Input name="paymentMethod" placeholder="Pix, transferencia..." />
-            </form>
+                Abrir pro-labore
+              </a>
+            </Button>
           </CardContent>
         </Card>
       </section>
