@@ -42,7 +42,7 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full">
       <CardHeader>
         <CardTitle>{mode === "login" ? "Entrar" : "Criar conta"}</CardTitle>
         <CardDescription>Acesse o painel da agencia com email e senha.</CardDescription>
