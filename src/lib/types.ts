@@ -41,6 +41,16 @@ export type Client = {
   notes: string;
   status: ClientStatus;
   services: ContractedService[];
+  credentials: ClientCredential[];
+};
+
+export type ClientCredential = {
+  id: string;
+  clientId: string;
+  platform: string;
+  login: string;
+  password: string;
+  notes: string;
 };
 
 export type ContractedService = {
