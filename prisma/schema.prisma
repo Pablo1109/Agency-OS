@@ -201,6 +201,7 @@ model FinancialEntry {
   paymentMethod String?
   paid          Boolean     @default(false)
   recurring     Boolean     @default(false)
+  recurrenceFrequency String?
   installment   Boolean     @default(false)
   installments  Int?
   currentPart   Int?
