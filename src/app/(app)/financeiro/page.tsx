@@ -1,4 +1,4 @@
-import { CheckCircle2, CircleDollarSign, Plus, ReceiptText, Repeat2, WalletCards } from "lucide-react";
+import { CheckCircle2, CircleDollarSign, ReceiptText, Repeat2, WalletCards } from "lucide-react";
 import { FinanceChart } from "@/components/finance-chart";
 import { MetricCard } from "@/components/metric-card";
 import { PageHeader } from "@/components/page-header";
@@ -6,13 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-import { createFinanceAction, markFinancePaidAction, registerClientPaymentAction } from "@/lib/actions";
+import { markFinancePaidAction, registerClientPaymentAction } from "@/lib/actions";
 import { getAppData } from "@/lib/data";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { getDashboardMetrics, getFinanceChart } from "@/lib/metrics";
 import type { FinancialEntry } from "@/lib/types";
+import { NewFinanceWizard } from "./new-finance-wizard";
 
 function monthKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -41,6 +40,19 @@ function balance(entries: FinancialEntry[], paidOnly = false) {
   return sum(entries, "RECEITA", paidOnly) - sum(entries, "DESPESA", paidOnly);
 }
 
+function parseDueDays(value: string, fallback: number) {
+  const days = value
+    .split(/[,\s]+/)
+    .map((day) => Number(day))
+    .filter((day) => Number.isInteger(day) && day >= 1 && day <= 31);
+
+  return days.length ? Array.from(new Set(days)).sort((a, b) => a - b) : [fallback || 1];
+}
+
+function sameDay(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
 export default async function FinancePage({
   searchParams
 }: {
@@ -60,12 +72,32 @@ export default async function FinancePage({
   const nextEntries = data.finances.filter((entry) => entryMonth(entry) === monthKey(nextDate));
   const selectedLabel = selectedDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
   const nextLabel = nextDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  const expectedClientPayments = data.clients
+    .filter((client) => client.status === "ATIVO")
+    .flatMap((client) => {
+      const lastDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
+      return parseDueDays(client.dueDays, client.dueDay).map((day) => {
+        const dueDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), Math.min(day, lastDay));
+        const paidEntry = data.finances.find((entry) => {
+          const entryDate = new Date(entry.dueDate ?? entry.date);
+          return entry.type === "RECEITA" && entry.clientId === client.id && entry.paid && sameDay(entryDate, dueDate);
+        });
+
+        return {
+          client,
+          dueDate,
+          paidEntry,
+          overdue: !paidEntry && dueDate < new Date()
+        };
+      });
+    })
+    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
 
   return (
     <>
       <PageHeader
         title="Financeiro"
-        description="Receitas, despesas, parcelamentos, previsao e leitura simples do lucro real."
+        description="Receitas, despesas, parcelamentos, previsoes e confirmacoes rapidas."
       />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -122,145 +154,71 @@ export default async function FinancePage({
       <section className="mt-6 grid gap-4 xl:grid-cols-[1fr_0.85fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Fluxo financeiro</CardTitle>
-            <CardDescription>Baseado em lancamentos pagos.</CardDescription>
+            <CardTitle>Recebimentos previstos</CardTitle>
+            <CardDescription>Clientes fixos do periodo selecionado. Confirme quando o pagamento cair.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <FinanceChart data={chart} />
+          <CardContent className="space-y-3">
+            {expectedClientPayments.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum cliente ativo com vencimento previsto.</p> : null}
+            {expectedClientPayments.map(({ client, dueDate, paidEntry, overdue }) => (
+              <div key={`${client.id}-${dueDate.toISOString()}`} className="flex items-center justify-between gap-4 rounded-md border p-3">
+                <div>
+                  <p className="text-sm font-medium">{client.company || client.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Vence {formatDate(dueDate.toISOString())} | {formatCurrency(client.monthlyValue)}
+                  </p>
+                  <div className="mt-2">
+                    {paidEntry ? (
+                      <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">Recebido</Badge>
+                    ) : overdue ? (
+                      <Badge className="border-rose-200 bg-rose-50 text-rose-700">Atrasado</Badge>
+                    ) : (
+                      <Badge className="border-amber-200 bg-amber-50 text-amber-700">Previsto</Badge>
+                    )}
+                  </div>
+                </div>
+                {!paidEntry ? (
+                  <form action={registerClientPaymentAction}>
+                    <input type="hidden" name="clientId" value={client.id} />
+                    <input type="hidden" name="amount" value={client.monthlyValue} />
+                    <input type="hidden" name="dueDate" value={dueDate.toISOString().slice(0, 10)} />
+                    <input type="hidden" name="date" value={new Date().toISOString().slice(0, 10)} />
+                    <input type="hidden" name="description" value={`Pagamento ${client.company || client.name}`} />
+                    <Button type="submit" size="sm" variant="outline">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Recebi
+                    </Button>
+                  </form>
+                ) : null}
+              </div>
+            ))}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
             <CardTitle>Novo lancamento</CardTitle>
-            <CardDescription>Registre receita, despesa ou compra parcelada.</CardDescription>
+            <CardDescription>Escolha receita ou despesa e preencha apenas o que importa.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={createFinanceAction} className="grid gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="type">Tipo</Label>
-                  <Select id="type" name="type" defaultValue="RECEITA">
-                    <option value="RECEITA">Receita</option>
-                    <option value="DESPESA">Despesa</option>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="amount">Valor da parcela</Label>
-                  <Input id="amount" name="amount" type="number" step="0.01" placeholder="500" required />
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="description">Descricao</Label>
-                <Input id="description" name="description" placeholder="Notebook, mensalidade cliente..." required />
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="category">Categoria</Label>
-                  <Input id="category" name="category" placeholder="Equipamento, cliente fixo..." required />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="paymentMethod">Pagamento</Label>
-                  <Input id="paymentMethod" name="paymentMethod" placeholder="Pix, cartao, boleto" />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="date">Data inicial</Label>
-                  <Input id="date" name="date" type="date" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="dueDate">1o vencimento</Label>
-                  <Input id="dueDate" name="dueDate" type="date" />
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="clientId">Cliente</Label>
-                <Select id="clientId" name="clientId" defaultValue="">
-                  <option value="">Sem cliente</option>
-                  {data.clients.map((client) => (
-                    <option key={client.id} value={client.id}>{client.company || client.name}</option>
-                  ))}
-                </Select>
-              </div>
-              <div className="grid gap-3 rounded-lg border bg-muted/40 p-3 text-sm">
-                <label className="flex items-center gap-2">
-                  <input name="paid" type="checkbox" className="h-4 w-4 rounded border" />
-                  Pago/recebido
-                </label>
-                <label className="flex items-center gap-2">
-                  <input name="recurring" type="checkbox" className="h-4 w-4 rounded border" />
-                  Recorrente mensal
-                </label>
-                <label className="flex items-center gap-2">
-                  <input name="installment" type="checkbox" className="h-4 w-4 rounded border" />
-                  Parcelado
-                </label>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="installments">Quantidade de parcelas</Label>
-                <Input id="installments" name="installments" type="number" min="1" max="120" placeholder="Ex: 6" />
-              </div>
-              <Button type="submit">
-                <Plus className="h-4 w-4" />
-                Salvar lancamento
-              </Button>
-            </form>
+            <NewFinanceWizard clients={data.clients.map((client) => ({
+              id: client.id,
+              name: client.name,
+              company: client.company,
+              monthlyValue: client.monthlyValue,
+              plan: client.plan
+            }))} />
           </CardContent>
         </Card>
       </section>
 
-      <section className="mt-6 grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
+      <section className="mt-6">
         <Card>
           <CardHeader>
-            <CardTitle>Receber de cliente</CardTitle>
-            <CardDescription>Gera receita paga automaticamente para cliente fixo ou projeto.</CardDescription>
+            <CardTitle>Fluxo financeiro</CardTitle>
+            <CardDescription>Baseado em lancamentos pagos.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={registerClientPaymentAction} className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="paymentClientId">Cliente</Label>
-                <Select id="paymentClientId" name="clientId" required defaultValue="">
-                  <option value="">Selecione</option>
-                  {data.clients.map((client) => (
-                    <option key={client.id} value={client.id}>{client.company || client.name} - {formatCurrency(client.monthlyValue)}</option>
-                  ))}
-                </Select>
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="paymentAmount">Valor recebido</Label>
-                  <Input id="paymentAmount" name="amount" type="number" step="0.01" placeholder="Usa valor do cliente" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="paymentMethodQuick">Metodo</Label>
-                  <Input id="paymentMethodQuick" name="paymentMethod" placeholder="Pix" />
-                </div>
-              </div>
-              <Button type="submit">
-                <CheckCircle2 className="h-4 w-4" />
-                Registrar pagamento
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Vencimentos dos clientes</CardTitle>
-            <CardDescription>Referencia para mensal, quinzenal, semanal ou datas personalizadas.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {data.clients.length === 0 ? <p className="text-sm text-muted-foreground">Cadastre clientes para acompanhar vencimentos.</p> : null}
-            {data.clients.map((client) => (
-              <div key={client.id} className="flex items-center justify-between gap-4 rounded-md border p-3">
-                <div>
-                  <p className="text-sm font-medium">{client.company || client.name}</p>
-                  <p className="text-xs text-muted-foreground">{client.billingFrequency.toLowerCase()} | dia(s) {client.dueDays || client.dueDay}</p>
-                </div>
-                <p className="text-sm font-semibold">{formatCurrency(client.monthlyValue)}</p>
-              </div>
-            ))}
+            <FinanceChart data={chart} />
           </CardContent>
         </Card>
       </section>
