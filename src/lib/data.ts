@@ -107,6 +107,7 @@ export async function getAppData(): Promise<AppData> {
         paymentMethod: entry.paymentMethod ?? undefined,
         paid: entry.paid,
         recurring: entry.recurring,
+        recurrenceFrequency: entry.recurrenceFrequency ?? undefined,
         installment: entry.installment,
         installments: entry.installments ?? undefined,
         currentPart: entry.currentPart ?? undefined,

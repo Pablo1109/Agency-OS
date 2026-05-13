@@ -86,6 +86,7 @@ export type FinancialEntry = {
   paymentMethod?: string;
   paid: boolean;
   recurring: boolean;
+  recurrenceFrequency?: string;
   installment: boolean;
   installments?: number;
   currentPart?: number;

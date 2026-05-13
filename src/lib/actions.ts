@@ -28,13 +28,29 @@ const clientSchema = z.object({
   notes: z.string().optional()
 });
 
-function normalizeDueDays(value: string) {
+function defaultDueDays(fallback: number, frequency: "MENSAL" | "QUINZENAL" | "SEMANAL" | "PERSONALIZADO") {
+  const start = Math.min(Math.max(fallback || 1, 1), 31);
+
+  if (frequency === "QUINZENAL") {
+    return [start, Math.min(start + 15, 31)].join(",");
+  }
+
+  if (frequency === "SEMANAL") {
+    return [start, start + 7, start + 14, start + 21]
+      .filter((day) => day <= 31)
+      .join(",");
+  }
+
+  return String(start);
+}
+
+function normalizeDueDays(value: string, fallback: number, frequency: "MENSAL" | "QUINZENAL" | "SEMANAL" | "PERSONALIZADO") {
   const days = value
     .split(/[,\s]+/)
     .map((day) => Number(day.trim()))
     .filter((day) => Number.isInteger(day) && day >= 1 && day <= 31);
 
-  return Array.from(new Set(days)).sort((a, b) => a - b).join(",") || "1";
+  return Array.from(new Set(days)).sort((a, b) => a - b).join(",") || defaultDueDays(fallback, frequency);
 }
 
 function addMonths(date: Date, months: number) {
@@ -65,7 +81,7 @@ export async function createClientAction(formData: FormData) {
   await prisma.client.create({
     data: {
       ...parsed.data,
-      dueDays: normalizeDueDays(parsed.data.dueDays || String(parsed.data.dueDay)),
+      dueDays: normalizeDueDays(parsed.data.dueDays, parsed.data.dueDay, parsed.data.billingFrequency),
       email: parsed.data.email || null
     }
   });
@@ -92,7 +108,7 @@ export async function updateClientAction(formData: FormData) {
     where: { id: clientId },
     data: {
       ...parsed.data,
-      dueDays: normalizeDueDays(parsed.data.dueDays || String(parsed.data.dueDay)),
+      dueDays: normalizeDueDays(parsed.data.dueDays, parsed.data.dueDay, parsed.data.billingFrequency),
       email: parsed.data.email || null
     }
   });
@@ -177,6 +193,7 @@ const financeSchema = z.object({
   paymentMethod: z.string().optional(),
   paid: z.string().optional(),
   recurring: z.string().optional(),
+  recurrenceFrequency: z.string().optional(),
   installment: z.string().optional(),
   installments: z.coerce.number().min(1).max(120).optional(),
   clientId: z.string().optional().or(z.literal(""))
@@ -264,6 +281,7 @@ export async function createFinanceAction(formData: FormData) {
         paymentMethod: parsed.data.paymentMethod,
         paid: index === 0 && parsed.data.paid === "on",
         recurring: false,
+        recurrenceFrequency: null,
         installment: true,
         installments,
         currentPart: index + 1,
@@ -287,6 +305,7 @@ export async function createFinanceAction(formData: FormData) {
       paymentMethod: parsed.data.paymentMethod,
       paid: parsed.data.paid === "on",
       recurring: parsed.data.recurring === "on",
+      recurrenceFrequency: parsed.data.recurring === "on" ? parsed.data.recurrenceFrequency || "MENSAL" : null,
       installment,
       installments: installment ? installments : null,
       currentPart: installment ? 1 : null,
@@ -341,6 +360,88 @@ export async function markFinancePaidAction(formData: FormData) {
     data: {
       paid: true,
       date: new Date()
+    }
+  });
+
+  revalidatePath("/financeiro");
+  revalidatePath("/dashboard");
+}
+
+const recurringFinanceSchema = z.object({
+  entryId: z.string().min(1),
+  description: z.string().min(2),
+  category: z.string().min(2),
+  amount: z.coerce.number().positive(),
+  dueDate: z.string().optional().or(z.literal("")),
+  paymentMethod: z.string().optional(),
+  recurrenceFrequency: z.string().optional(),
+  recurring: z.string().optional()
+});
+
+export async function updateRecurringFinanceAction(formData: FormData) {
+  if (!hasDatabase()) {
+    return;
+  }
+
+  const parsed = recurringFinanceSchema.safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return;
+  }
+
+  const prisma = await getPrisma();
+
+  await prisma.financialEntry.update({
+    where: { id: parsed.data.entryId },
+    data: {
+      description: parsed.data.description,
+      category: parsed.data.category,
+      amount: parsed.data.amount,
+      dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : null,
+      paymentMethod: parsed.data.paymentMethod,
+      recurring: parsed.data.recurring === "on",
+      recurrenceFrequency: parsed.data.recurring === "on" ? parsed.data.recurrenceFrequency || "MENSAL" : null
+    }
+  });
+
+  revalidatePath("/financeiro");
+  revalidatePath("/financeiro/recorrencias");
+  revalidatePath("/dashboard");
+}
+
+const proLaboreSchema = z.object({
+  amount: z.coerce.number().positive(),
+  date: z.string().optional().or(z.literal("")),
+  paymentMethod: z.string().optional(),
+  description: z.string().optional()
+});
+
+export async function createProLaboreAction(formData: FormData) {
+  if (!hasDatabase()) {
+    return;
+  }
+
+  const parsed = proLaboreSchema.safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return;
+  }
+
+  const prisma = await getPrisma();
+
+  await prisma.financialEntry.create({
+    data: {
+      type: "DESPESA",
+      description: parsed.data.description || "Retirada pro-labore",
+      category: "Pro-labore",
+      amount: parsed.data.amount,
+      date: parsed.data.date ? new Date(parsed.data.date) : new Date(),
+      dueDate: parsed.data.date ? new Date(parsed.data.date) : null,
+      paymentMethod: parsed.data.paymentMethod || "Transferencia PF",
+      paid: true,
+      recurring: false,
+      recurrenceFrequency: null,
+      installment: false
     }
   });
 
