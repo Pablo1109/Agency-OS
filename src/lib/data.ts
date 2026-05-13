@@ -32,7 +32,7 @@ export async function getAppData(): Promise<AppData> {
     const [clients, tasks, finances, content, leads] = await Promise.all([
       prisma.client.findMany({
         orderBy: [{ status: "asc" }, { name: "asc" }],
-        include: { services: true }
+        include: { services: true, credentials: true }
       }),
       prisma.task.findMany({
         orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
@@ -67,6 +67,14 @@ export async function getAppData(): Promise<AppData> {
         billingFrequency: client.billingFrequency ?? "MENSAL",
         notes: client.notes ?? "",
         status: client.status,
+        credentials: client.credentials.map((credential) => ({
+          id: credential.id,
+          clientId: credential.clientId,
+          platform: credential.platform,
+          login: credential.login ?? "",
+          password: credential.password ?? "",
+          notes: credential.notes ?? ""
+        })),
         services: client.services.map((service) => ({
           id: service.id,
           clientId: service.clientId,
