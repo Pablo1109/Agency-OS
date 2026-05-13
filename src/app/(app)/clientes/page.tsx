@@ -173,12 +173,12 @@ export default async function ClientsPage() {
 
                 {client.notes ? <p className="mt-4 text-sm text-muted-foreground">{client.notes}</p> : null}
 
-                <div className="mt-5 grid gap-4 rounded-lg border bg-muted/30 p-4">
-                  <div className="flex items-center gap-2">
+                <details className="mt-5 rounded-lg border bg-muted/30 p-4">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold">
                     <Save className="h-4 w-4 text-primary" />
-                    <h3 className="text-sm font-semibold">Editar ficha</h3>
-                  </div>
-                  <form action={updateClientAction} className="grid gap-3">
+                    Editar ficha
+                  </summary>
+                  <form action={updateClientAction} className="mt-4 grid gap-3">
                     <input type="hidden" name="clientId" value={client.id} />
                     <div className="grid gap-3 md:grid-cols-2">
                       <Input name="name" defaultValue={client.name} placeholder="Nome" required />
@@ -211,13 +211,14 @@ export default async function ClientsPage() {
                       Salvar ficha
                     </Button>
                   </form>
-                </div>
+                </details>
 
-                <div className="mt-4 grid gap-4 rounded-lg border bg-muted/30 p-4">
-                  <div className="flex items-center gap-2">
+                <details className="mt-4 rounded-lg border bg-muted/30 p-4">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold">
                     <KeyRound className="h-4 w-4 text-primary" />
-                    <h3 className="text-sm font-semibold">Acessos do cliente</h3>
-                  </div>
+                    Acessos do cliente
+                  </summary>
+                  <div className="mt-4 grid gap-4">
                   {client.credentials.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Nenhum acesso cadastrado.</p>
                   ) : null}
@@ -242,7 +243,8 @@ export default async function ClientsPage() {
                     </Button>
                     <Textarea name="notes" placeholder="Observacoes do acesso" className="md:col-span-4" />
                   </form>
-                </div>
+                  </div>
+                </details>
               </CardContent>
             </Card>
           ))}
