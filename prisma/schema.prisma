@@ -136,12 +136,27 @@ model Client {
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
   services     ContractedService[]
+  credentials  ClientCredential[]
   tasks        Task[]
   finances     FinancialEntry[]
   contentItems ContentItem[]
   files        FileAsset[]
 
   @@map("clients")
+}
+
+model ClientCredential {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  platform  String
+  login     String?
+  password  String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("client_credentials")
 }
 
 model ContractedService {
