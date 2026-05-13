@@ -40,12 +40,10 @@ export function AppShell({
 }) {
   const pathname = usePathname();
 
-  async function signOut() {
-    if (!user.demo) {
-      await authClient.signOut();
-    }
-    window.location.href = "/login";
-  }
+ async function signOut() {
+  await authClient.signOut();
+  window.location.href = "/login";
+}
 
   return (
     <div className="min-h-screen">
@@ -94,7 +92,7 @@ export function AppShell({
               </Button>
               <Button variant="ghost" size="sm" className="justify-start" onClick={signOut}>
                 <LogOut className="h-4 w-4" />
-                {user.demo ? "Entrar" : "Sair"}
+                Sair
               </Button>
             </div>
           </div>
