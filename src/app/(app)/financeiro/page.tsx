@@ -53,6 +53,29 @@ function sameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
+function expectedPaymentsForMonth(data: Awaited<ReturnType<typeof getAppData>>, monthDate: Date) {
+  return data.clients
+    .filter((client) => client.status === "ATIVO")
+    .flatMap((client) => {
+      const lastDay = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
+      return parseDueDays(client.dueDays, client.dueDay).map((day) => {
+        const dueDate = new Date(monthDate.getFullYear(), monthDate.getMonth(), Math.min(day, lastDay));
+        const paidEntry = data.finances.find((entry) => {
+          const entryDate = new Date(entry.dueDate ?? entry.date);
+          return entry.type === "RECEITA" && entry.clientId === client.id && entry.paid && sameDay(entryDate, dueDate);
+        });
+
+        return {
+          client,
+          dueDate,
+          paidEntry,
+          overdue: !paidEntry && dueDate < new Date()
+        };
+      });
+    })
+    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+}
+
 export default async function FinancePage({
   searchParams
 }: {
@@ -70,32 +93,24 @@ export default async function FinancePage({
   const nextDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1);
   const selectedEntries = data.finances.filter((entry) => entryMonth(entry) === selectedMonth);
   const nextEntries = data.finances.filter((entry) => entryMonth(entry) === monthKey(nextDate));
+  const selectedExpenses = selectedEntries.filter((entry) => entry.type === "DESPESA");
+  const selectedRevenues = selectedEntries.filter((entry) => entry.type === "RECEITA");
   const walletBalance = balance(data.finances, true);
   const proLaboreTotal = selectedEntries
     .filter((entry) => entry.type === "DESPESA" && entry.paid && entry.category.toLowerCase().includes("pro-labore"))
     .reduce((total, entry) => total + entry.amount, 0);
   const selectedLabel = selectedDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
   const nextLabel = nextDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-  const expectedClientPayments = data.clients
-    .filter((client) => client.status === "ATIVO")
-    .flatMap((client) => {
-      const lastDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
-      return parseDueDays(client.dueDays, client.dueDay).map((day) => {
-        const dueDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), Math.min(day, lastDay));
-        const paidEntry = data.finances.find((entry) => {
-          const entryDate = new Date(entry.dueDate ?? entry.date);
-          return entry.type === "RECEITA" && entry.clientId === client.id && entry.paid && sameDay(entryDate, dueDate);
-        });
-
-        return {
-          client,
-          dueDate,
-          paidEntry,
-          overdue: !paidEntry && dueDate < new Date()
-        };
-      });
-    })
-    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+  const expectedClientPayments = expectedPaymentsForMonth(data, selectedDate);
+  const nextExpectedClientPayments = expectedPaymentsForMonth(data, nextDate);
+  const selectedExpectedReceivables = expectedClientPayments
+    .filter((payment) => !payment.paidEntry)
+    .reduce((total, payment) => total + payment.client.monthlyValue, 0);
+  const nextExpectedReceivables = nextExpectedClientPayments
+    .filter((payment) => !payment.paidEntry)
+    .reduce((total, payment) => total + payment.client.monthlyValue, 0);
+  const selectedForecast = balance(selectedEntries) + selectedExpectedReceivables;
+  const nextForecast = balance(nextEntries) + nextExpectedReceivables;
 
   return (
     <>
@@ -106,7 +121,7 @@ export default async function FinancePage({
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard title="Receitas pagas" value={formatCurrency(metrics.revenue)} detail="Total recebido no mes" icon={CircleDollarSign} tone="teal" />
-        <MetricCard title="Despesas pagas" value={formatCurrency(metrics.expenses)} detail="Custos e assinaturas" icon={ReceiptText} tone="gold" />
+        <MetricCard title="Despesas pagas" value={formatCurrency(metrics.expenses)} detail="Custos e assinaturas" icon={ReceiptText} tone="gold" href={`/financeiro?month=${selectedMonth}#despesas`} />
         <MetricCard title="Lucro real" value={formatCurrency(metrics.profit)} detail="Receitas menos despesas" icon={WalletCards} tone="coral" />
         <MetricCard title="Carteira" value={formatCurrency(walletBalance)} detail="Caixa acumulado" icon={HandCoins} tone="teal" />
         <MetricCard title="Recorrencias" value={String(recurring.length)} detail={`${installments.length} parcela(s) ativa(s)`} icon={Repeat2} tone="slate" href="/financeiro/recorrencias" />
@@ -143,13 +158,15 @@ export default async function FinancePage({
             <div className="rounded-md border p-4">
               <p className="text-sm text-muted-foreground">Realizado em {selectedLabel}</p>
               <p className="mt-1 text-xl font-semibold">{formatCurrency(balance(selectedEntries, true))}</p>
-              <p className="mt-2 text-xs text-muted-foreground">Previsto: {formatCurrency(balance(selectedEntries))}</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Previsto: {formatCurrency(selectedForecast)} incluindo {formatCurrency(selectedExpectedReceivables)} em clientes fixos
+              </p>
             </div>
             <div className="rounded-md border p-4">
               <p className="text-sm text-muted-foreground">Previsao de {nextLabel}</p>
-              <p className="mt-1 text-xl font-semibold">{formatCurrency(balance(nextEntries))}</p>
+              <p className="mt-1 text-xl font-semibold">{formatCurrency(nextForecast)}</p>
               <p className="mt-2 text-xs text-muted-foreground">
-                Receitas {formatCurrency(sum(nextEntries, "RECEITA"))} | Despesas {formatCurrency(sum(nextEntries, "DESPESA"))}
+                Receitas {formatCurrency(sum(nextEntries, "RECEITA") + nextExpectedReceivables)} | Despesas {formatCurrency(sum(nextEntries, "DESPESA"))}
               </p>
             </div>
           </CardContent>
@@ -279,7 +296,7 @@ export default async function FinancePage({
             <CardDescription>Clientes fixos, freelances e projetos unicos.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {selectedEntries.filter((entry) => entry.type === "RECEITA").map((entry) => (
+            {selectedRevenues.map((entry) => (
               <div key={entry.id} className="flex items-center justify-between gap-4 rounded-md border p-3">
                 <div>
                   <p className="text-sm font-medium">{entry.description}</p>
@@ -300,13 +317,16 @@ export default async function FinancePage({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card id="despesas">
           <CardHeader>
             <CardTitle>Despesas de {selectedLabel}</CardTitle>
-            <CardDescription>Compras, assinaturas, equipamentos, freelancers e parcelas.</CardDescription>
+            <CardDescription>
+              {selectedExpenses.length} lancamento(s), total previsto {formatCurrency(sum(selectedEntries, "DESPESA"))} e pago {formatCurrency(sum(selectedEntries, "DESPESA", true))}.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {selectedEntries.filter((entry) => entry.type === "DESPESA").map((entry) => (
+            {selectedExpenses.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma despesa neste periodo.</p> : null}
+            {selectedExpenses.map((entry) => (
               <div key={entry.id} className="flex items-center justify-between gap-4 rounded-md border p-3">
                 <div>
                   <p className="text-sm font-medium">{entry.description}</p>
