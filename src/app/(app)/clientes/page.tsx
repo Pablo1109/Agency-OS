@@ -19,7 +19,7 @@ export default async function ClientsPage() {
     <>
       <PageHeader
         title="Clientes"
-        description="Cadastre clientes, acompanhe plano contratado, valor mensal, vencimento e entregas combinadas."
+        description="Cadastre clientes, acompanhe plano contratado, valor por cobranca, vencimento e entregas combinadas."
       />
 
       <section className="grid gap-4 xl:grid-cols-[0.85fr_1.4fr]">
@@ -64,7 +64,7 @@ export default async function ClientsPage() {
                   <Input id="plan" name="plan" placeholder="Essencial" />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="monthlyValue">Valor mensal</Label>
+                  <Label htmlFor="monthlyValue">Valor por cobranca</Label>
                   <Input id="monthlyValue" name="monthlyValue" type="number" step="0.01" placeholder="1200" />
                 </div>
                 <div className="grid gap-2">
@@ -188,7 +188,7 @@ export default async function ClientsPage() {
                       <Input name="email" defaultValue={client.email} type="email" placeholder="Email" />
                       <Input name="niche" defaultValue={client.niche} placeholder="Nicho" />
                       <Input name="plan" defaultValue={client.plan} placeholder="Plano" />
-                      <Input name="monthlyValue" defaultValue={client.monthlyValue} type="number" step="0.01" placeholder="Valor" />
+                      <Input name="monthlyValue" defaultValue={client.monthlyValue} type="number" step="0.01" placeholder="Valor por cobranca" />
                       <Input name="dueDay" defaultValue={client.dueDay} type="number" min="1" max="31" placeholder="1o vencimento" />
                       <Input name="dueDays" defaultValue={client.dueDays} placeholder="Dias: 5, 20" />
                       <Select name="billingFrequency" defaultValue={client.billingFrequency}>
