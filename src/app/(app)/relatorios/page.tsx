@@ -1,4 +1,4 @@
-import { BarChart3, LineChart, Target, WalletCards } from "lucide-react";
+import { BarChart3, CalendarDays, ListChecks, Target, WalletCards } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { MetricCard } from "@/components/metric-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,12 +12,16 @@ export default async function ReportsPage() {
   const metrics = getDashboardMetrics(data);
   const goal = 8000;
   const goalProgress = (metrics.revenue / goal) * 100;
+  const finishedTasks = data.tasks.filter((task) => task.status === "FINALIZADO").length;
+  const taskProgress = data.tasks.length ? (finishedTasks / data.tasks.length) * 100 : 0;
+  const activeClientProgress = Math.min(100, metrics.activeClients * 20);
+  const scheduledContent = data.content.filter((item) => item.status === "AGENDADO" || item.status === "PUBLICADO").length;
 
   return (
     <>
       <PageHeader
         title="Relatorios"
-        description="Indicadores iniciais para entender crescimento, lucro e carga operacional."
+        description="Indicadores simples para entender crescimento, lucro, operacao e consistencia de conteudo."
       />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -39,22 +43,25 @@ export default async function ReportsPage() {
           title="Tarefas abertas"
           value={String(metrics.pendingTasks)}
           detail="Carga operacional atual"
-          icon={BarChart3}
+          icon={ListChecks}
           tone="gold"
         />
         <MetricCard
-          title="Leads no CRM"
-          value={String(data.leads.length)}
-          detail="Pipeline inicial"
-          icon={LineChart}
+          title="Conteudos no calendario"
+          value={String(data.content.length)}
+          detail={`${scheduledContent} agendado(s) ou publicado(s)`}
+          icon={CalendarDays}
           tone="slate"
         />
       </section>
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Saude do mes</CardTitle>
-          <CardDescription>Uma leitura simples para decidir o que atacar primeiro.</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-primary" />
+            Saude do mes
+          </CardTitle>
+          <CardDescription>Uma leitura rapida para decidir o que atacar primeiro.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-5 lg:grid-cols-3">
           <div>
@@ -69,14 +76,14 @@ export default async function ReportsPage() {
               <span>Clientes ativos</span>
               <strong>{metrics.activeClients}</strong>
             </div>
-            <Progress value={Math.min(100, metrics.activeClients * 20)} />
+            <Progress value={activeClientProgress} />
           </div>
           <div>
             <div className="mb-2 flex items-center justify-between text-sm">
               <span>Tarefas resolvidas</span>
-              <strong>{data.tasks.filter((task) => task.status === "FINALIZADO").length}</strong>
+              <strong>{finishedTasks}</strong>
             </div>
-            <Progress value={(data.tasks.filter((task) => task.status === "FINALIZADO").length / data.tasks.length) * 100} />
+            <Progress value={taskProgress} />
           </div>
         </CardContent>
       </Card>

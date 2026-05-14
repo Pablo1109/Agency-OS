@@ -17,7 +17,7 @@
   --muted-foreground: 215 16% 43%;
   --accent: 174 72% 38%;
   --accent-foreground: 180 100% 98%;
-  --destructive: 0 84.2% 60.2%;
+  --destructive: 0 84% 60%;
   --destructive-foreground: 210 40% 98%;
   --border: 214 32% 88%;
   --input: 214 32% 88%;
@@ -29,13 +29,34 @@
   border-color: hsl(var(--border));
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background:
-    radial-gradient(circle at top left, rgba(20, 184, 166, 0.12), transparent 34rem),
+    radial-gradient(circle at top left, rgba(20, 184, 166, 0.14), transparent 34rem),
+    radial-gradient(circle at 90% 10%, rgba(30, 64, 175, 0.10), transparent 28rem),
     linear-gradient(135deg, #f8fafc 0%, #eef6f8 46%, #f7fafc 100%);
   color: hsl(var(--foreground));
+  text-rendering: optimizeLegibility;
 }
 
 ::selection {
   background: rgba(20, 184, 166, 0.22);
+}
+
+a,
+button {
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+button:active,
+a:active {
+  transform: translateY(1px);
 }
