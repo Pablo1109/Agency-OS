@@ -251,9 +251,17 @@ export async function createFinanceAction(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+export async function createFinanceEntryAction(formData: FormData) {
+  return createFinanceAction(formData);
+}
+
 const financeIdSchema = z.object({
   financeId: z.string().min(1)
 });
+
+function normalizeFinanceId(formData: FormData) {
+  return String(formData.get("financeId") ?? formData.get("entryId") ?? formData.get("id") ?? "");
+}
 
 export async function deleteFinanceAction(formData: FormData) {
   if (!hasDatabase()) {
@@ -274,6 +282,13 @@ export async function deleteFinanceAction(formData: FormData) {
 
   revalidatePath("/financeiro");
   revalidatePath("/dashboard");
+}
+
+export async function deleteFinanceEntryAction(formData: FormData) {
+  const normalized = new FormData();
+  normalized.set("financeId", normalizeFinanceId(formData));
+
+  return deleteFinanceAction(normalized);
 }
 
 const financePaidSchema = financeIdSchema.extend({
@@ -300,6 +315,20 @@ export async function updateFinancePaidAction(formData: FormData) {
 
   revalidatePath("/financeiro");
   revalidatePath("/dashboard");
+}
+
+export async function markFinancePaidAction(formData: FormData) {
+  const rawPaid = String(formData.get("paid") ?? formData.get("isPaid") ?? "true");
+  const normalized = new FormData();
+
+  normalized.set("financeId", normalizeFinanceId(formData));
+  normalized.set("paid", ["true", "1", "on", "yes", "sim"].includes(rawPaid.toLowerCase()) ? "true" : "false");
+
+  return updateFinancePaidAction(normalized);
+}
+
+export async function updateFinanceEntryPaidAction(formData: FormData) {
+  return markFinancePaidAction(formData);
 }
 
 export async function updateTaskStatusAction(formData: FormData) {
