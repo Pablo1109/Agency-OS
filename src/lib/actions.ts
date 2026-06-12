@@ -50,6 +50,123 @@ export async function createClientAction(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+const clientIdSchema = z.object({
+  clientId: z.string().min(1)
+});
+
+const updateClientSchema = clientSchema.extend({
+  clientId: z.string().min(1)
+});
+
+export async function updateClientAction(formData: FormData) {
+  if (!hasDatabase()) {
+    return;
+  }
+
+  const parsed = updateClientSchema.safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return;
+  }
+
+  const prisma = await getPrisma();
+  const { clientId, ...client } = parsed.data;
+
+  await prisma.client.updateMany({
+    where: { id: clientId },
+    data: {
+      ...client,
+      email: client.email || null
+    }
+  });
+
+  revalidatePath("/clientes");
+  revalidatePath("/dashboard");
+}
+
+export async function deleteClientAction(formData: FormData) {
+  if (!hasDatabase()) {
+    return;
+  }
+
+  const parsed = clientIdSchema.safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return;
+  }
+
+  const prisma = await getPrisma();
+
+  await prisma.client.deleteMany({
+    where: { id: parsed.data.clientId }
+  });
+
+  revalidatePath("/clientes");
+  revalidatePath("/dashboard");
+}
+
+const clientStatusSchema = clientIdSchema.extend({
+  status: z.enum(["ATIVO", "PROSPECT", "PAUSADO", "INADIMPLENTE", "ENCERRADO"])
+});
+
+export async function updateClientStatusAction(formData: FormData) {
+  if (!hasDatabase()) {
+    return;
+  }
+
+  const parsed = clientStatusSchema.safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return;
+  }
+
+  const prisma = await getPrisma();
+
+  await prisma.client.updateMany({
+    where: { id: parsed.data.clientId },
+    data: { status: parsed.data.status }
+  });
+
+  revalidatePath("/clientes");
+  revalidatePath("/dashboard");
+}
+
+const clientCredentialSchema = z.object({
+  clientId: z.string().optional().or(z.literal("")),
+  name: z.string().min(2),
+  email: z.string().email(),
+  password: z.string().min(6)
+});
+
+export async function createClientCredentialAction(formData: FormData) {
+  if (!hasDatabase()) {
+    return;
+  }
+
+  const parsed = clientCredentialSchema.safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return;
+  }
+
+  try {
+    const { auth } = await import("./auth");
+
+    await (auth.api as { signUpEmail?: (input: { body: { name: string; email: string; password: string } }) => Promise<unknown> })
+      .signUpEmail?.({
+        body: {
+          name: parsed.data.name,
+          email: parsed.data.email,
+          password: parsed.data.password
+        }
+      });
+  } catch {
+    return;
+  }
+
+  revalidatePath("/clientes");
+}
+
 const taskSchema = z.object({
   title: z.string().min(2),
   description: z.string().optional(),
