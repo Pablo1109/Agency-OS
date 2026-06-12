@@ -1,4 +1,4 @@
-import { CircleDollarSign, Plus, ReceiptText, Repeat2, WalletCards } from "lucide-react";
+import { CircleDollarSign, ReceiptText, Repeat2, WalletCards } from "lucide-react";
 import { FinanceEntryLists } from "@/components/finance-entry-lists";
 import { FinanceChart } from "@/components/finance-chart";
 import { MetricCard } from "@/components/metric-card";
@@ -138,7 +138,7 @@ export default async function FinancePage() {
                   Parcelado
                 </label>
               </div>
-              <PendingSubmitButton idleLabel="Salvar lancamento" pendingLabel="Salvando..." icon={Plus} />
+              <PendingSubmitButton idleLabel="Salvar lancamento" pendingLabel="Salvando..." />
             </form>
           </CardContent>
         </Card>
